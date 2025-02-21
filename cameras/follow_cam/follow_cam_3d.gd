@@ -66,12 +66,13 @@ func _physics_process(_delta):
 func mouse_control(_event):
 
 	if _event is InputEventMouseMotion:
-		var new_rotation = rotation.x - _event.relative.y / 10000 * mouse_sensitivity
-		rotation.y -= _event.relative.x /  10000 * mouse_sensitivity
+		if look_target == null:
+			var new_rotation = rotation.x - _event.relative.y / 10000 * mouse_sensitivity
+			rotation.y -= _event.relative.x /  10000 * mouse_sensitivity
 
-		var clamped_rotation = clamp(new_rotation, -.8, 0.8) #rotation clamp
-		rotation.x = clamped_rotation
-		return
+			var clamped_rotation = clamp(new_rotation, -.8, 0.8) #rotation clamp
+			rotation.x = clamped_rotation
+			return
 
 func joystick_control(): # For controlling freecam rotation on gamepad
 
