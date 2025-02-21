@@ -25,6 +25,7 @@ class_name PlayerTargetingSystem
 @onready var center_eye : Area3D = $CenterEye
 @onready var eyeline = $Eyeline
 
+
 var target_list : Array = []
 @onready var targeting = false 
 
@@ -35,7 +36,11 @@ signal target_found
 ## The group name of targetable objects if using groups
 @export var target_group_name : String = "targets"
 ## The layers the eyes will scan when detecting targets
+
 @export_flags_3d_physics var target_detection_layer_mask = 3
+
+# degrees of freedom to allow camera when we're locked on a target 
+var target_locked_rotation_limits: Vector2 = Vector2(20, 30)
 
 func _ready():
 	center_eye.collision_mask = target_detection_layer_mask
@@ -108,6 +113,7 @@ func get_target(_list = target_list):
 	# a target to assign
 	for new_target in _list:
 		if await eyeline_check(new_target):
+			print("Found target %s"%new_target)
 			target_found.emit(new_target)
 			break
 	
