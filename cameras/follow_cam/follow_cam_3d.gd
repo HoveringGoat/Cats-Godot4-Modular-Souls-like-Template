@@ -36,6 +36,10 @@ signal target_cleared
 
 var current_cam_buffer = true
 
+# degrees of freedom to allow camera when we're locked on a target 
+var target_locked_rotation_limits: Vector2 = Vector2(30, 18)
+# degree of "offset" rotation we have from the target location
+var target_locked_rotation_offset: Vector2
 
 func _ready():
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -57,7 +61,7 @@ func _input(event):
 	mouse_control(event)
 	
 func _physics_process(_delta):
-	joystick_control() # run in physics processr ather than event for smoother action
+	joystick_control() # run in physics process rather than event for smoother action
 	_follow_target(follow_target)
 	_lookat_target()
 	_detect_camera_change()
@@ -66,13 +70,14 @@ func _physics_process(_delta):
 func mouse_control(_event):
 
 	if _event is InputEventMouseMotion:
-		if look_target == null:
-			var new_rotation = rotation.x - _event.relative.y / 10000 * mouse_sensitivity
-			rotation.y -= _event.relative.x /  10000 * mouse_sensitivity
-
-			var clamped_rotation = clamp(new_rotation, -.8, 0.8) #rotation clamp
-			rotation.x = clamped_rotation
-			return
+		# check if we can rotate camera further
+		var elevation_delta = _event.relative.x /  10000 * mouse_sensitivity
+		var new_rotation = rotation.x - _event.relative.y / 10000 * mouse_sensitivity
+		var azmuth_rotation = clamp(new_rotation, -.8, 0.8) #rotation clamp
+		rotation.y -= elevation_delta
+		rotation.x = azmuth_rotation
+		if look_target != null:
+			_lookat_target()
 
 func joystick_control(): # For controlling freecam rotation on gamepad
 
@@ -84,6 +89,8 @@ func joystick_control(): # For controlling freecam rotation on gamepad
 	
 	var clamped_rotation = clamp(temporary_rotation, -.8, .8)
 	rotation.x = clamped_rotation
+	if look_target != null:
+		_lookat_target()
 
 func _detect_camera_change():
 	if camera_3d != get_viewport().get_camera_3d() \
@@ -123,7 +130,21 @@ func _lookat_target():
 	if targeting: # otherwise track the target
 		if look_target: 
 			var vertical_look_offset = Vector3(0,1,0) ## to not look at the target's feet.
-			look_at(look_target.global_position + vertical_look_offset ,Vector3.UP)
+			var currentElevation: float = rotation_degrees.x
+			var currentAzmuth: float =  fmod(rotation_degrees.y + 360, 360)
+			look_at(look_target.global_position + vertical_look_offset, Vector3.UP)
+			
+			var target_locked_rotation_offset = Vector2(rotation_degrees.y - currentAzmuth, rotation_degrees.x - currentElevation)
+			if target_locked_rotation_offset.x < -200:
+				target_locked_rotation_offset.x += 360
+				
+			var magnitude = target_locked_rotation_offset.x / abs(target_locked_rotation_offset.x)
+			target_locked_rotation_offset.x = min(target_locked_rotation_limits.x, abs(target_locked_rotation_offset.x)) * magnitude
+			magnitude = target_locked_rotation_offset.y / abs(target_locked_rotation_offset.y)
+			target_locked_rotation_offset.y = min(target_locked_rotation_limits.y, abs(target_locked_rotation_offset.y)) * magnitude
+			
+			rotation_degrees.y -= target_locked_rotation_offset.x
+			rotation_degrees.x -= target_locked_rotation_offset.y
 			
 	if "guarding" in follow_target:
 		if follow_target.guarding:
